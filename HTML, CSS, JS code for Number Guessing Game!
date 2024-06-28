@@ -1,0 +1,75 @@
+########## HTML Code for Number Guessing Game ##########
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess the Number</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Guess the Number</h1>
+        <p>Try to guess the number between 1 and 100!</p>
+        <input type="number" id="guessInput" min="1" max="100">
+        <button onclick="checkGuess()">Submit Guess</button>
+        <p id="message"></p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+########## CSS Code for Number Guessing Game ##########
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+.container {
+    text-align: center;
+    background-color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+input, button {
+    font-size: 1rem;
+    padding: 0.5rem;
+    margin: 0.5rem;
+}
+
+########## JS Code for Number Guessing Game ##########
+
+// Generate a random number between 1 and 100
+const targetNumber = Math.floor(Math.random() * 100) + 1;
+let attempts = 0;
+
+function checkGuess() {
+    const guess = parseInt(document.getElementById('guessInput').value);
+    attempts++;
+
+    if (isNaN(guess) || guess < 1 || guess > 100) {
+        setMessage('Please enter a valid number between 1 and 100.');
+        return;
+    }
+
+    if (guess === targetNumber) {
+        setMessage(`Congratulations! You guessed the number ${targetNumber} in ${attempts} attempts!`);
+        document.querySelector('button').disabled = true;
+    } else if (guess < targetNumber) {
+        setMessage('Too low! Try a higher number.');
+    } else {
+        setMessage('Too high! Try a lower number.');
+    }
+}
+
+function setMessage(msg) {
+    document.getElementById('message').textContent = msg;
+}
