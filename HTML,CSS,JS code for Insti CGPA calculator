@@ -1,0 +1,187 @@
+########## HTML Code for Insti CGPA calculator ##########
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insti CGPA Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Institute CGPA Calculator</h1>
+        <form id="courseCountForm">
+            <label for="courseCount">Total number of courses:</label>
+            <input type="number" id="courseCount" min="1" required>
+            <button type="submit">Generate Course Inputs</button>
+        </form>
+        <form id="cgpaForm" style="display: none;">
+            <div id="courseInputs"></div>
+            <button type="submit">Calculate CGPA</button>
+        </form>
+        <div id="result"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
+########## CSS Code for Insti CGPA calculator ##########
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+.container {
+    width: 80%;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+form {
+    margin-bottom: 2rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+input[type="number"],
+input[type="text"] {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#result {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+########## JS code for Insti CGPA calculator ##########
+
+// Sample course data (replace with your institution's actual data)
+const courseData = {
+    'CS101': 3,
+    'MATH201': 4,
+    'ENG102': 3,
+    'PHYS101': 4,
+    'CHEM101': 4
+};
+
+document.getElementById('courseCountForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const courseCount = parseInt(document.getElementById('courseCount').value);
+    generateCourseInputs(courseCount);
+});
+
+document.getElementById('cgpaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    calculateCGPA();
+});
+
+function generateCourseInputs(count) {
+    const courseInputs = document.getElementById('courseInputs');
+    courseInputs.innerHTML = '';
+    
+    for (let i = 1; i <= count; i++) {
+        courseInputs.innerHTML += `
+            <div>
+                <label for="course${i}">Course ${i} Code:</label>
+                <input type="text" id="course${i}" required>
+                <label for="grade${i}">Grade:</label>
+                <input type="text" id="grade${i}" required>
+            </div>
+        `;
+    }
+    
+    document.getElementById('cgpaForm').style.display = 'block';
+}
+
+function calculateCGPA() {
+    const courses = document.querySelectorAll('[id^="course"]');
+    const grades = document.querySelectorAll('[id^="grade"]');
+    let totalWeightedCredits = 0;
+    let totalCredits = 0;
+
+    for (let i = 0; i < courses.length; i++) {
+        const courseCode = courses[i].value.toUpperCase();
+        const grade = grades[i].value.toUpperCase();
+        
+        if (courseData.hasOwnProperty(courseCode)) {
+            const credits = courseData[courseCode];
+            const gradeWeight = getGradeWeight(grade);
+            
+            if (gradeWeight !== null) {
+                totalWeightedCredits += credits * gradeWeight;
+                totalCredits += credits;
+            } else {
+                alert(`Invalid grade for course ${courseCode}`);
+                return;
+            }
+        } else {
+            alert(`Course ${courseCode} not found in the database.`);
+            return;
+        }
+    }
+
+    if (totalCredits === 0) {
+        alert("No valid courses entered. Please check your inputs.");
+        return;
+    }
+
+    const cgpa = totalWeightedCredits / totalCredits;
+    document.getElementById('result').innerHTML = `Your CGPA is: ${cgpa.toFixed(2)}`;
+}
+
+function getGradeWeight(grade) {
+    const gradeWeights = {
+        'A': 4.0,
+        'B': 3.0,
+        'C': 2.0,
+        'D': 1.0,
+        'F': 0.0
+    };
+
+    if (gradeWeights.hasOwnProperty(grade)) {
+        return gradeWeights[grade];
+    } else {
+        alert(`Invalid grade: ${grade}`);
+        return null;
+    }
+}
