@@ -1,6 +1,6 @@
 # This is the very first code I wrote using HTML. 
 # It basically develops a simple webpage which seeks user to input details regarding selling his items in a website named InstiOLX. 
-# It also has my signature at the end saying I creaated this webpage. Please use HTML online compilers, Visual Studio Code compilers etc to run the program.
+# It also has my signature at the end saying I created this webpage. Please use HTML online compilers, Visual Studio Code compilers etc to run the program.
 <!DOCTYPE html>
 <html lang="en">
 <head>
