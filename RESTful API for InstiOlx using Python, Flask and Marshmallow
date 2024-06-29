@@ -1,0 +1,257 @@
+########## PYTHON CODE: REST API for InstiOlx. The API enables users to perform CRUD (Create, Read, Update, Delete) operations on the product catalog ##########
+########## PROJECT STRUCTURE ###############
+instiOlx/
+│
+├── app/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── routes.py
+│   └── schemas.py
+│
+├── tests/
+│   └── test_api.py
+│
+├── config.py
+├── requirements.txt
+└── run.py
+################################################# CODE STARTS BELOW #####################################################
+Flask==2.1.0
+Flask-SQLAlchemy==2.5.1
+marshmallow==3.14.1
+pytest==7.1.2
+import os
+
+class Config:
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///instiOlx.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from config import Config
+
+db = SQLAlchemy()
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    db.init_app(app)
+
+    from app import routes
+    app.register_blueprint(routes.bp)
+
+    return app
+    from app import db
+
+class Product(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    price = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String(50), nullable=True)
+    image_url = db.Column(db.String(200), nullable=True)
+
+    def __repr__(self):
+        return f'<Product {self.name}>'
+        from marshmallow import Schema, fields, validate
+
+class ProductSchema(Schema):
+    id = fields.Int(dump_only=True)
+    name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
+    description = fields.Str()
+    price = fields.Float(required=True, validate=validate.Range(min=0))
+    category = fields.Str(validate=validate.Length(max=50))
+    image_url = fields.Url()
+
+product_schema = ProductSchema()
+products_schema = ProductSchema(many=True)
+from flask import Blueprint, request, jsonify
+from app import db
+from app.models import Product
+from app.schemas import product_schema, products_schema
+
+bp = Blueprint('api', __name__)
+
+@bp.route('/products', methods=['POST'])
+def create_product():
+    data = request.json
+    if not data:
+        return jsonify({"message": "No input data provided"}), 400
+    
+    errors = product_schema.validate(data)
+    if errors:
+        return jsonify(errors), 422
+    
+    product = Product(**data)
+    db.session.add(product)
+    db.session.commit()
+    
+    return jsonify({"message": "Product created successfully", "product": product_schema.dump(product)}), 201
+
+@bp.route('/products', methods=['GET'])
+def get_products():
+    products = Product.query.all()
+    return jsonify(products_schema.dump(products))
+
+@bp.route('/products/<int:id>', methods=['GET'])
+def get_product(id):
+    product = Product.query.get_or_404(id)
+    return jsonify(product_schema.dump(product))
+
+@bp.route('/products/<int:id>', methods=['PUT'])
+def update_product(id):
+    product = Product.query.get_or_404(id)
+    data = request.json
+    
+    if not data:
+        return jsonify({"message": "No input data provided"}), 400
+    
+    errors = product_schema.validate(data)
+    if errors:
+        return jsonify(errors), 422
+    
+    for key, value in data.items():
+        setattr(product, key, value)
+    
+    db.session.commit()
+    
+    return jsonify({"message": "Product updated successfully", "product": product_schema.dump(product)})
+
+@bp.route('/products/<int:id>', methods=['DELETE'])
+def delete_product(id):
+    product = Product.query.get_or_404(id)
+    db.session.delete(product)
+    db.session.commit()
+    return jsonify({"message": "Product deleted successfully"})
+
+@bp.errorhandler(404)
+def not_found(error):
+    return jsonify({"message": "Resource not found"}), 404
+
+@bp.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return jsonify({"message": "Internal server error"}), 500
+    from app import create_app, db
+
+app = create_app()
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
+    import pytest
+from app import create_app, db
+from app.models import Product
+
+@pytest.fixture
+def client():
+    app = create_app()
+    app.config['TESTING'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    
+    with app.test_client() as client:
+        with app.app_context():
+            db.create_all()
+        yield client
+        
+        with app.app_context():
+            db.drop_all()
+
+def test_create_product(client):
+    response = client.post('/products', json={
+        'name': 'Test Product',
+        'description': 'A test product',
+        'price': 9.99,
+        'category': 'Test'
+    })
+    assert response.status_code == 201
+    assert 'Test Product' in response.get_json()['product']['name']
+
+def test_get_products(client):
+    client.post('/products', json={
+        'name': 'Test Product 1',
+        'description': 'A test product',
+        'price': 9.99,
+        'category': 'Test'
+    })
+    client.post('/products', json={
+        'name': 'Test Product 2',
+        'description': 'Another test product',
+        'price': 19.99,
+        'category': 'Test'
+    })
+    
+    response = client.get('/products')
+    assert response.status_code == 200
+    assert len(response.get_json()) == 2
+
+def test_get_product(client):
+    response = client.post('/products', json={
+        'name': 'Test Product',
+        'description': 'A test product',
+        'price': 9.99,
+        'category': 'Test'
+    })
+    product_id = response.get_json()['product']['id']
+    
+    response = client.get(f'/products/{product_id}')
+    assert response.status_code == 200
+    assert response.get_json()['name'] == 'Test Product'
+
+def test_update_product(client):
+    response = client.post('/products', json={
+        'name': 'Test Product',
+        'description': 'A test product',
+        'price': 9.99,
+        'category': 'Test'
+    })
+    product_id = response.get_json()['product']['id']
+    
+    response = client.put(f'/products/{product_id}', json={
+        'name': 'Updated Test Product',
+        'price': 19.99
+    })
+    assert response.status_code == 200
+    assert response.get_json()['product']['name'] == 'Updated Test Product'
+    assert response.get_json()['product']['price'] == 19.99
+
+def test_delete_product(client):
+    response = client.post('/products', json={
+        'name': 'Test Product',
+        'description': 'A test product',
+        'price': 9.99,
+        'category': 'Test'
+    })
+    product_id = response.get_json()['product']['id']
+    
+    response = client.delete(f'/products/{product_id}')
+    assert response.status_code == 200
+    
+    response = client.get(f'/products/{product_id}')
+    assert response.status_code == 404
+################################################ CODE ENDS ##############################################
+
+##### PROBLEM APPROACH #####
+1. Setup and Configuration: Using Flask and SQLAlchemy for the API and database.
+2. API Endpoints: Implemented CRUD operations for products.
+3. Database Design: Created a Product model with the required fields.
+4. Error Handling and Validation: Used Marshmallow for input validation and implemented error handlers.
+5. Testing: Provided basic integration tests for the API endpoints.
+
+##### To run the API: #####
+1. Install the required packages: "pip install -r requirements.txt"
+2. Set the "FLASK_APP" environment variable: "export FLASK_APP=run.py"
+3. Run the application: "flask run"
+4. To run the tests: "pytest tests/test_api.py"
+
+##### IN CASE OF CONFUSION, PLEASE FOLLOW THESE STEPS :) #####
+Now, copy the code for each file as follows:
+1. In requirements.txt, copy the content from the requirements.txt section.
+2. In config.py, copy the content from the config.py section.
+3. In app/__init__.py, copy the content from the app/__init__.py section.
+4. In app/models.py, copy the content from the app/models.py section.
+5. In app/schemas.py, copy the content from the app/schemas.py section.
+6. In app/routes.py, copy the content from the app/routes.py section.
+7. In run.py, copy the content from the run.py section.
+8. In tests/test_api.py, copy the content from the tests/test_api.py section.
+################################################################################## THE END #######################################################################################################################
