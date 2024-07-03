@@ -1,0 +1,95 @@
+########## HTML code - frontend to interact with Smart Contract ##########
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Contract Interaction</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.0.umd.min.js"></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <h1>Smart Contract Interaction</h1>
+    <button id="connectWallet">Connect Wallet</button>
+    <div id="contractFunctions" style="display: none;">
+        <!-- Contract function buttons will be added here dynamically -->
+    </div>
+    <div id="output"></div>
+</body>
+</html>
+
+########## JS code - frontend to interact with Smart Contract ##########
+
+const contractAddress = "YOUR_CONTRACT_ADDRESS";
+const contractABI = [
+    // Add your contract ABI here
+];
+
+let contract;
+let signer;
+
+const connectWalletBtn = document.getElementById("connectWallet");
+const contractFunctions = document.getElementById("contractFunctions");
+const output = document.getElementById("output");
+
+connectWalletBtn.addEventListener("click", connectWallet);
+
+async function connectWallet() {
+    if (typeof window.ethereum !== "undefined") {
+        try {
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            
+            connectWalletBtn.style.display = "none";
+            contractFunctions.style.display = "block";
+            
+            createFunctionButtons();
+        } catch (error) {
+            console.error("Failed to connect wallet:", error);
+        }
+    } else {
+        console.log("Please install MetaMask");
+    }
+}
+
+function createFunctionButtons() {
+    contractABI.forEach(item => {
+        if (item.type === "function") {
+            const button = document.createElement("button");
+            button.textContent = item.name;
+            button.addEventListener("click", () => callContractFunction(item));
+            contractFunctions.appendChild(button);
+        }
+    });
+}
+
+async function callContractFunction(functionABI) {
+    const functionName = functionABI.name;
+    const inputs = functionABI.inputs;
+    
+    let args = [];
+    if (inputs.length > 0) {
+        args = inputs.map(input => {
+            return prompt(`Enter value for ${input.name} (${input.type}):`);
+        });
+    }
+    
+    try {
+        let result;
+        if (functionABI.stateMutability === "view") {
+            result = await contract[functionName](...args);
+        } else {
+            const tx = await contract[functionName](...args);
+            await tx.wait();
+            result = "Transaction successful";
+        }
+        output.textContent = `${functionName} result: ${result}`;
+    } catch (error) {
+        console.error(`Error calling ${functionName}:`, error);
+        output.textContent = `Error: ${error.message}`;
+    }
+}
+######################################################################################## THE END ################################################################################################################
